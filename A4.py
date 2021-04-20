@@ -4,6 +4,7 @@ import random
 import mysql.connector
 from faker import Faker
 
+#Connects to the class database
 db = mysql.connector.connect(
         host="34.94.182.22",
         user="myappuser",
@@ -12,15 +13,19 @@ db = mysql.connector.connect(
     )
 
 def begin():
+    #Executes all the functions, and takes in filename inputs.
     fileName = input("Enter filename (with .csv): ")
     recordCount = int(input("Enter number of records wanted: "))
     main(recordCount, fileName)
 
 def main(records, fileName):
+    #Makes it easier to deal with parameterwise
+    dropData()
     genData(records, fileName)
     importData(records, fileName)
 
 def genData(records, fileName):
+    #Generates data with faker, stores reused data in arrays
     fake = Faker()
 
     customerID = []
@@ -30,8 +35,11 @@ def genData(records, fileName):
     transID = []
     counter = 0
 
+    #Writes down data to the user's csv file
     csv_file = open(fileName,"w")
     writer = csv.writer(csv_file)
+
+    #Generates data for the Product table
     writer.writerow(["ProductID","ProductName","manuId"])
     for x in range(0, records):
         counter = counter + 1
@@ -42,6 +50,8 @@ def genData(records, fileName):
         manuID.append(temp1)
 
         writer.writerow([temp,fake.name(),temp1])
+
+    #Generates data for Customer Table
     writer.writerow(["CustomerID", "CustomerName", "CustomerLocationID"])
     counter = 0
     for x in range(0, records):
@@ -53,6 +63,8 @@ def genData(records, fileName):
         locationID.append(temp1)
 
         writer.writerow([temp,fake.name(),temp1])
+
+    # Generates data for Main Table
     writer.writerow(["TransID", "CustomerID", "ProductID"])
     counter = 0
     for x in range(0, records):
@@ -62,15 +74,19 @@ def genData(records, fileName):
         transID.append(temp)
 
         writer.writerow([temp, customerID[x], productID[x]])
+
+    #Generates data for Manufacturer table
     writer.writerow(["ManuID", "ManuName", "ManuCountry"])
     for x in range(0, records):
-        writer.writerow([manuID[x],fake.name(),fake.country()])
+        writer.writerow([manuID[x],fake.company(),fake.country()])
 
+    #Generates data for Location table
     writer.writerow(["LocationID", "LocationName"])
     for x in range(0, records):
-        writer.writerow([locationID[x],fake.name()])
+        writer.writerow([locationID[x],fake.city()])
 
 def dropData():
+    #Drops all the tables
     curr = db.cursor()
     curr.execute("Drop TABLE Main")
     curr.close()
@@ -92,15 +108,17 @@ def dropData():
     curr.close()
 
 def importData(records, fileName):
+    #Creates tables, then imports data from CSV file
     curr = db.cursor()
-    curr.execute("CREATE TABLE Product(ProductID INT PRIMARY KEY, Product_Name VARCHAR(30),ProductManuID INT UNIQUE)")
-    curr.execute("CREATE TABLE Customer(CustomerID INT PRIMARY KEY, Customer_Name VARCHAR(30),Customer_Location_ID INT UNIQUE)")
+    curr.execute("CREATE TABLE Product(ProductID INT PRIMARY KEY, Product_Name VARCHAR(50),ProductManuID INT UNIQUE)")
+    curr.execute("CREATE TABLE Customer(CustomerID INT PRIMARY KEY, Customer_Name VARCHAR(50),Customer_Location_ID INT UNIQUE)")
     curr.execute("CREATE TABLE Main(TransID INT PRIMARY KEY, CustomerID INT, ProductID INT, FOREIGN KEY(CustomerID) REFERENCES Customer(CustomerID), FOREIGN KEY(ProductID) REFERENCES Product(ProductID))")
-    curr.execute("CREATE TABLE Manufacturer(ManuID INT UNIQUE, ManuName VARCHAR(30),ManuCountry VARCHAR(50), FOREIGN KEY(ManuID) REFERENCES Product(ProductManuID))")
-    curr.execute("CREATE TABLE Location(LocationID INT UNIQUE, LocationName VARCHAR(30), FOREIGN KEY(LocationID) REFERENCES Customer(Customer_Location_ID))")
+    curr.execute("CREATE TABLE Manufacturer(ManuID INT UNIQUE, ManuName VARCHAR(50),ManuCountry VARCHAR(50), FOREIGN KEY(ManuID) REFERENCES Product(ProductManuID))")
+    curr.execute("CREATE TABLE Location(LocationID INT UNIQUE, LocationName VARCHAR(50), FOREIGN KEY(LocationID) REFERENCES Customer(Customer_Location_ID))")
 
     count = 0
 
+    #This is for the organization of the table
     stop1 = records + 1
     stop2 = (records + 1) * 2
     stop3 = (records + 1) * 3
@@ -110,6 +128,7 @@ def importData(records, fileName):
     stop6 = (records * 3) + 2
     stop7 = (records * 4) + 3
 
+    #Opens the file, and inserts data
     with open(fileName) as csvFile:
         reader = csv.DictReader(csvFile)
 
@@ -118,7 +137,7 @@ def importData(records, fileName):
             scount = str(count)
             print("Row count: " + scount)
             print(row)
-
+            #Updates fieldnames
             if count == stop1:
                 reader.fieldnames = "CustomerID", "CustomerName", "CustomerLocationID"
                 continue
@@ -150,4 +169,5 @@ def importData(records, fileName):
     curr.close()
     db.commit()
 
+#Executes all the functions
 begin()
